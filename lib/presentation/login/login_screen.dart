@@ -1,20 +1,42 @@
+import 'package:deliveryapp/domain/repository/api_repository.dart';
+import 'package:deliveryapp/domain/repository/local_storage_repository.dart';
 import 'package:deliveryapp/presentation/home/home_screen.dart';
-import 'package:deliveryapp/presentation/login/login_controller.dart';
-import 'package:deliveryapp/presentation/routes/delivery_navigation.dart';
+import 'package:deliveryapp/presentation/login/login_bloc.dart';
 import 'package:deliveryapp/presentation/theme.dart';
 import 'package:deliveryapp/presentation/widgets/delivery_button.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 
 const logoSize = 45.0;
 
-class LoginScreen extends GetWidget<LoginController> {
-  void login() async {
-    final result = await controller.login();
+class LoginScreen extends StatelessWidget {
+  LoginScreen._();
+  final _scaffolKey = GlobalKey<ScaffoldState>();
+  static Widget init(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => LoginBLoC(
+        apiRepositoryInterface: context.read<ApiRepositoryInterface>(),
+        localRepositoryInterface: context.read<LocalRepositoryInterface>(),
+      ),
+      builder: (_, __) => LoginScreen._(),
+    );
+  }
+
+  void login(BuildContext context) async {
+    final bloc = Provider.of<LoginBLoC>(context, listen: false);
+    final result = await bloc.login();
     if (result) {
-      Get.offAllNamed(DeliveryRoutes.home);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => HomeScreen.init(context),
+        ),
+      );
     } else {
-      Get.snackbar('Error', 'Login incorrect');
+      _scaffolKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text('Login Incorrect'),
+        ),
+      );
     }
   }
 
@@ -23,7 +45,10 @@ class LoginScreen extends GetWidget<LoginController> {
     final size = MediaQuery.of(context).size;
     final width = size.width;
     final moreSize = 50.0;
+    final bloc = context.watch<LoginBLoC>();
+
     return Scaffold(
+      key: _scaffolKey,
       body: Stack(
         children: [
           Column(
@@ -92,7 +117,7 @@ class LoginScreen extends GetWidget<LoginController> {
                         ),
                         const SizedBox(height: 10.0),
                         TextField(
-                          controller: controller.usernameTextController,
+                          controller: bloc.usernameTextController,
                           decoration: InputDecoration(
                             hintText: 'Username',
                             prefixIcon: Icon(
@@ -115,7 +140,7 @@ class LoginScreen extends GetWidget<LoginController> {
                         const SizedBox(height: 10.0),
                         TextField(
                           obscureText: true,
-                          controller: controller.passwordTextController,
+                          controller: bloc.passwordTextController,
                           decoration: InputDecoration(
                             hintText: 'Password',
                             prefixIcon: Icon(
@@ -145,7 +170,7 @@ class LoginScreen extends GetWidget<LoginController> {
                     child: DeliveryButton(
                       padding: EdgeInsets.all(5.0),
                       text: 'Login',
-                      onTap: () => login(),
+                      onTap: () => login(context),
                     ),
                   ),
                 ),
@@ -153,21 +178,15 @@ class LoginScreen extends GetWidget<LoginController> {
             ],
           ),
           Positioned.fill(
-            child: Obx(
-              () {
-                if (controller.loginState.value == LoginState.loading) {
-                  return Container(
+            child: (bloc.loginState == LoginState.loading)
+                ? Container(
                     color: Colors.black26,
                     child: Center(
                       child: CircularProgressIndicator(),
                     ),
-                  );
-                } else {
-                  return SizedBox.shrink();
-                }
-              },
-            ),
-          )
+                  )
+                : SizedBox.shrink(),
+          ),
         ],
       ),
     );

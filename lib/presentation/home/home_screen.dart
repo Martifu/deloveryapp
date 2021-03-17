@@ -1,41 +1,55 @@
-import 'package:deliveryapp/presentation/home/cart/cart_controller.dart';
+import 'package:deliveryapp/domain/repository/api_repository.dart';
+import 'package:deliveryapp/domain/repository/local_storage_repository.dart';
+import 'package:deliveryapp/presentation/home/cart/cart_bloc.dart';
 import 'package:deliveryapp/presentation/home/cart/cart_screen.dart';
-import 'package:deliveryapp/presentation/home/home_controller.dart';
+import 'package:deliveryapp/presentation/home/home_bloc.dart';
 import 'package:deliveryapp/presentation/home/products/products_screen.dart';
 import 'package:deliveryapp/presentation/home/profile/profile_screen.dart';
 import 'package:deliveryapp/presentation/theme.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 
-class HomeScreen extends GetWidget<HomeController> {
+class HomeScreen extends StatelessWidget {
+  HomeScreen._();
+  static Widget init(BuildContext context) {
+    return MultiProvider(providers: [
+      ChangeNotifierProvider(
+        create: (_) => HomeBLoC(
+          apiRepositoryInterface: context.read<ApiRepositoryInterface>(),
+          localRepositoryInterface: context.read<LocalRepositoryInterface>(),
+        )..loadUser(),
+        builder: (_, __) => HomeScreen._(),
+      ),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bloc = Provider.of<HomeBLoC>(context);
     return Scaffold(
       body: Column(
         children: [
-          Expanded(child: Obx(() {
-            return IndexedStack(
-              index: controller.currentIndex.value,
-              children: [
-                ProductsScreen(),
-                Placeholder(),
-                CartScreen(
-                  onShopping: () {
-                    controller.updateSelectedndex(0);
-                  },
-                ),
-                Placeholder(),
-                ProfileScreen(),
-              ],
-            );
-          })),
-          Obx(() {
-            return _DeliveryNavigationBar(
-              index: controller.currentIndex.value,
-              onIndexSelected: (index) =>
-                  {controller.updateSelectedndex(index)},
-            );
-          })
+          Expanded(
+              child: IndexedStack(
+            index: bloc.indexSelected,
+            children: [
+              ProductsScreen.init(context),
+              Placeholder(),
+              CartScreen(
+                onShopping: () {
+                  bloc.updateSelectedndex(0);
+                },
+              ),
+              Placeholder(),
+              ProfileScreen.init(context),
+            ],
+          )),
+          _DeliveryNavigationBar(
+            index: bloc.indexSelected,
+            onIndexSelected: (index) => {
+              bloc.updateSelectedndex(index),
+            },
+          ),
         ],
       ),
     );
@@ -45,14 +59,15 @@ class HomeScreen extends GetWidget<HomeController> {
 class _DeliveryNavigationBar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onIndexSelected;
-  final controller = Get.find<HomeController>();
-  final cartController = Get.find<CartController>();
 
   _DeliveryNavigationBar({Key key, this.index, this.onIndexSelected})
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final homeBloc = Provider.of<HomeBLoC>(context);
+    final cartBloc = Provider.of<CartBLoC>(context);
+
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: DecoratedBox(
@@ -101,22 +116,21 @@ class _DeliveryNavigationBar extends StatelessWidget {
                       ),
                     ),
                     Positioned(
-                        right: 0,
-                        child: Obx(
-                          () => cartController.totalItems.value == 0
-                              ? SizedBox.shrink()
-                              : CircleAvatar(
-                                  radius: 10,
-                                  backgroundColor: Colors.pinkAccent,
-                                  child: Text(
-                                    cartController.totalItems.value.toString(),
-                                    style: TextStyle(
-                                      color: DeliveryColors.white,
-                                      fontSize: 14,
-                                    ),
-                                  ),
+                      right: 0,
+                      child: cartBloc.totalItems == 0
+                          ? SizedBox.shrink()
+                          : CircleAvatar(
+                              radius: 10,
+                              backgroundColor: Colors.pinkAccent,
+                              child: Text(
+                                cartBloc.totalItems.toString(),
+                                style: TextStyle(
+                                  color: DeliveryColors.white,
+                                  fontSize: 14,
                                 ),
-                        )),
+                              ),
+                            ),
+                    ),
                   ],
                 ),
               ),
@@ -130,17 +144,15 @@ class _DeliveryNavigationBar extends StatelessWidget {
                 ),
               ),
               InkWell(
-                  onTap: () => onIndexSelected(4),
-                  child: Obx(() {
-                    final user = controller.user.value;
-                    return user.image == null
-                        ? const SizedBox.shrink()
-                        : CircleAvatar(
-                            radius: 15,
-                            backgroundColor: Colors.red,
-                            backgroundImage: AssetImage(user.image),
-                          );
-                  })),
+                onTap: () => onIndexSelected(4),
+                child: homeBloc.user?.image == null
+                    ? const SizedBox.shrink()
+                    : CircleAvatar(
+                        radius: 15,
+                        backgroundColor: Colors.red,
+                        backgroundImage: AssetImage(homeBloc.user.image),
+                      ),
+              ),
             ],
           ),
         ),

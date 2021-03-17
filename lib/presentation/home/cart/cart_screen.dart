@@ -1,61 +1,63 @@
-import 'package:deliveryapp/presentation/home/cart/cart_controller.dart';
+import 'package:deliveryapp/presentation/home/cart/cart_bloc.dart';
 import 'package:deliveryapp/presentation/home/products/product_cart.dart';
 import 'package:deliveryapp/presentation/theme.dart';
 import 'package:deliveryapp/presentation/widgets/delivery_button.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:provider/provider.dart';
 
-class CartScreen extends GetWidget<CartController> {
+class CartScreen extends StatelessWidget {
   final VoidCallback onShopping;
 
   CartScreen({Key key, this.onShopping}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    final bloc = context.watch<CartBLoC>();
     return Scaffold(
       appBar: AppBar(
         title: Text('Shopping Cart'),
       ),
-      body: Obx(() => controller.totalItems.value == 0
+      body: bloc.totalItems == 0
           ? _EmptyCart(
               onShopping: onShopping,
             )
-          : _FullCart()),
+          : _FullCart(),
     );
   }
 }
 
-class _FullCart extends GetWidget<CartController> {
+class _FullCart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final bloc = context.watch<CartBLoC>();
+    final totals = bloc.totalPrice.toStringAsFixed(2);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           flex: 3,
           child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 15.0),
-              child: Obx(
-                () => ListView.builder(
-                  itemExtent: 230,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: controller.cartList.length,
-                  itemBuilder: (context, index) {
-                    final productCart = controller.cartList[index];
-                    return _ShoppingCartProduct(
-                      productCart: productCart,
-                      onDelete: () {
-                        controller.deleteProduct(productCart);
-                      },
-                      onIncrement: () {
-                        controller.increment(productCart);
-                      },
-                      onDecrement: () {
-                        controller.decrement(productCart);
-                      },
-                    );
+            padding: EdgeInsets.symmetric(vertical: 15.0),
+            child: ListView.builder(
+              itemExtent: 230,
+              scrollDirection: Axis.horizontal,
+              itemCount: bloc.cartList.length,
+              itemBuilder: (context, index) {
+                final productCart = bloc.cartList[index];
+                return _ShoppingCartProduct(
+                  productCart: productCart,
+                  onDelete: () {
+                    bloc.deleteProduct(productCart);
                   },
-                ),
-              )),
+                  onIncrement: () {
+                    bloc.increment(productCart);
+                  },
+                  onDecrement: () {
+                    bloc.decrement(productCart);
+                  },
+                );
+              },
+            ),
+          ),
         ),
         Expanded(
           flex: 2,
@@ -129,16 +131,14 @@ class _FullCart extends GetWidget<CartController> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            Obx(
-                              () => Text(
-                                '\$${controller.totalPrice.value.toStringAsFixed(2)} usd',
-                                style: TextStyle(
-                                  color: Theme.of(context).accentColor,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            Text(
+                              '\$$totals usd',
+                              style: TextStyle(
+                                color: Theme.of(context).accentColor,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
-                            )
+                            ),
                           ],
                         )
                       ],

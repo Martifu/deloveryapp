@@ -1,11 +1,11 @@
 import 'package:deliveryapp/domain/model/product.dart';
 import 'package:deliveryapp/presentation/home/products/product_cart.dart';
-import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 
-class CartController extends GetxController {
-  RxList<ProductCart> cartList = <ProductCart>[].obs;
-  RxInt totalItems = 0.obs;
-  RxDouble totalPrice = 0.0.obs;
+class CartBLoC extends ChangeNotifier {
+  List<ProductCart> cartList = <ProductCart>[];
+  int totalItems = 0;
+  double totalPrice = 0.0;
 
   void add(Product product) {
     final temp = List<ProductCart>.from(cartList);
@@ -20,24 +20,20 @@ class CartController extends GetxController {
     if (!found) {
       temp.add(ProductCart(product: product));
     }
-    cartList.assignAll(List<ProductCart>.from(temp));
-
-    final total =
-        temp.fold(0, (previousValue, element) => element.qty + previousValue);
-    totalItems(total);
+    cartList = List<ProductCart>.from(temp);
     calculateTotals(temp);
   }
 
   void increment(ProductCart productCart) {
     productCart.qty += 1;
-    cartList.assignAll(List<ProductCart>.from(cartList));
+    cartList = List<ProductCart>.from(cartList);
     calculateTotals(cartList);
   }
 
   void decrement(ProductCart productCart) {
     if (productCart.qty > 1) {
       productCart.qty -= 1;
-      cartList.assignAll(List<ProductCart>.from(cartList));
+      cartList = List<ProductCart>.from(cartList);
       calculateTotals(cartList);
     }
   }
@@ -45,13 +41,14 @@ class CartController extends GetxController {
   void calculateTotals(List<ProductCart> temp) {
     final total =
         temp.fold(0, (previousValue, element) => element.qty + previousValue);
-    totalItems(total);
+    totalItems = total;
     final totalCost = temp.fold(
       0.0,
       (previousValue, element) =>
           (element.qty * element.product.price) + previousValue,
     );
-    totalPrice(totalCost);
+    totalPrice = totalCost;
+    notifyListeners();
   }
 
   void deleteProduct(ProductCart product) {

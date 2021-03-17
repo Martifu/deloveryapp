@@ -3,39 +3,41 @@ import 'package:deliveryapp/domain/repository/api_repository.dart';
 import 'package:deliveryapp/domain/repository/local_storage_repository.dart';
 import 'package:deliveryapp/domain/request/login_request.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:get/get.dart';
 
 enum LoginState {
   loading,
   initial,
 }
 
-class LoginController extends GetxController {
+class LoginBLoC extends ChangeNotifier {
   final LocalRepositoryInterface localRepositoryInterface;
   final ApiRepositoryInterface apiRepositoryInterface;
 
-  LoginController({this.localRepositoryInterface, this.apiRepositoryInterface});
+  LoginBLoC({this.localRepositoryInterface, this.apiRepositoryInterface});
 
   final usernameTextController = TextEditingController();
   final passwordTextController = TextEditingController();
-  var loginState = LoginState.initial.obs;
+  var loginState = LoginState.initial;
 
   Future<bool> login() async {
     final username = usernameTextController.text;
     final password = passwordTextController.text;
 
     try {
-      loginState(LoginState.loading);
+      loginState = LoginState.loading;
+      notifyListeners();
       final loginResponse = await apiRepositoryInterface.login(
         LoginRequest(username, password),
       );
       await localRepositoryInterface.saveToken(loginResponse.token);
       await localRepositoryInterface.saveUser(loginResponse.user);
+      loginState = LoginState.initial;
+      notifyListeners();
 
       return true;
-    } on AuthException catch (e) {
-      loginState(LoginState.initial);
-
+    } on AuthException catch (_) {
+      loginState = LoginState.initial;
+      notifyListeners();
       return false;
     }
   }
